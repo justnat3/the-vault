@@ -165,6 +165,6 @@ fn main() {
     } // fpath drops at end of scope
 
     std::mem::drop(vault_path);
-    // panic_immediate_abort this is safe
+    // avoid abort, damn you nyx.
     panic!();
 }

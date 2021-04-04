@@ -1,26 +1,25 @@
-use nix::{
-    sys::wait::waitpid,
-    unistd::{fork, ForkResult},
-};
-
 use std::{
-    thread::sleep,
-    time::Duration,
-    process::exit,
+    os::unix::process::CommandExt,
     process::Command,
-    fs,
-    env,
     path::Path,
+    env,
+    fs,
 };
 
-// current progress:
-//  * check vault path and editor in env
-//  * check if the vault path exists
-//  * check if the file at that path exists
-//  * take and verify args
-//  * create a full note path
-//  * file titles are the same as the file name by default
-//  * create and edit file
+// this is for the "--list" feature
+fn list_dir(path: &String) {
+    // Ok(DirEntry) list of directory Entries
+    if let Ok(files) = fs::read_dir(path) {
+        // iter over the files in Ok(DirEntry)
+        for file in files {
+            if let Ok(file) = file {
+                // convert DirEntry to OsString
+                // convert OsString to String and print it out
+                println!("{}", file.file_name().to_string_lossy());
+            }
+        }
+    }
+}
 
 fn main() {
 
@@ -33,92 +32,53 @@ fn main() {
         panic!("THE VAULT:\nPlease Provide an title for your new note");
     }
 
-    let clean_file: String = args[1].to_owned().split_whitespace().collect();
+    // sanatize the stdin and make the file name out of it
+    let clean_file: String = args[1..].join("-").split_whitespace().collect();
 
     // Handle Vault_Path
-    let vault_path: String = env::var("VAULT_PATH")
-        .unwrap_or_else(|err| {
-            // We want to let the user know that we could not find VAULT_PATH
-            eprintln!("Oh No! {} -> VAULT_PATH", err);
-            std::process::exit(1);
-        });
+    let vault_path: String = env::var("VAULT_PATH").unwrap();
 
-    let vault_editor: String = env::var("VAULT_EDITOR")
-        .unwrap_or_else(|err| {
-            // We want to let the user know that we could not find VAULT_PATH
-            eprintln!("Oh No! {} -> VAULT_EDITOR", err);
-            std::process::exit(1);
-        });
-
-    // check if the vault path exists
-    if !Path::new(&vault_path).exists() {
-        // warn and exit if the path does exist
-        eprintln!("\nVault Path does not exist");
-        std::process::exit(1);
+    // after we verify args is longer than 1 we can peek at what that arg is
+    if args[1] == "-l" || args[1] == "--list" {
+        // we just loop over all of the files in the vault
+        // then we print them out at an unknown size
+        list_dir(&vault_path);
+        // we can exit here to not open a editor process
+        return;
     }
+
+    // Handle Vault_Editor path
+    let vault_editor: String = env::var("VAULT_EDITOR").unwrap();
+
+    // panic if the vault path does not exist
+    if !Path::new(&vault_path).exists() { panic!("vault path does not exist"); }
 
     // get the full path final dest for vault_path
     let fpath = format!("{}{}", vault_path, &clean_file);
 
-    dbg!(&fpath);
-
     // check if file already exists- if file exists open it in the vault_editor
     if Path::new(&fpath).is_file() {
 
-        match unsafe{fork().expect("did not fork process")} {
-            ForkResult::Parent { child } => {
-                println!("try to kill me to check if the target process will be killed");
-                // wait for the fork to prevent zombie processes
-                waitpid(Some(child), None).unwrap();
+        std::mem::drop(&vault_path);
+        std::mem::drop(&clean_file);
+        // launch editor
+        Command::new(&vault_editor)
+            .arg(&fpath)
+            .exec();
 
-                println!("exit");
-                exit(0)
-            }
-
-            ForkResult::Child => {
-
-                // spawn a process
-                Command::new(&vault_editor)
-                    .arg(&fpath)
-                    .spawn()
-                    .expect("Failed to launch editor");
-                exit(0);
-            }
-        };
     } else {
         // create a new note
-        fs::File::create(&fpath)
-            .unwrap_or_else(|err| {
-                // We want to let the user know that we could not find VAULT_PATH
-                eprintln!("Oh No! {}", err);
-                std::process::exit(1);
-            });
+        fs::File::create(&fpath).unwrap();
 
         // write the title of the file and start a new line
-        // fs::write(&fpath, format!("# {}\n", args[1]))
-        //    .unwrap_or_else(|err| {
-                // We want to let the user know that we could not find VAULT_PATH
-        //        eprintln!("Oh No! {}", err);
-        //        std::process::exit(1);
-        //    });
+        fs::write(&fpath, args[1..].join(" ")).expect("problem");
 
-
-        match unsafe{fork().expect("did not fork process")} {
-            ForkResult::Parent { child } => {
-                // wait for the fork to prevent zombie processes
-                waitpid(Some(child), None).unwrap();
-
-                exit(0)
-            }
-
-            ForkResult::Child => {
-                // spawn a process
-                Command::new(&vault_editor)
-                    .arg(&fpath)
-                    .spawn()
-                    .expect("Failed to launch editor");
-            }
-        };
+        std::mem::drop(&vault_path);
+        std::mem::drop(&clean_file);
+        // launch editor
+        Command::new(&vault_editor)
+            .arg(&fpath)
+            .exec();
     }
-    exit(0)
+    return;
 }

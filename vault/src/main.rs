@@ -5,9 +5,6 @@ use std::{
     env,
     fs,
 };
-// TODO
-//  * remove based on the --list function
-//  * purge empty files
 
 // TODO: REFACTOR ME PLEASE
 fn purge_empty_files(path: &String) {

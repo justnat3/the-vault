@@ -27,6 +27,21 @@ fn purge_empty_files(path: &String) {
     }
 }
 
+fn remove_note(path: &String, file_name: &String) {
+    // if the path contains the filename as verification then we can go ahead
+    // and delete that file.
+    if path.contains(file_name) {
+        //verify that the file was removed
+        let remove_file = fs::remove_file(path);
+        if remove_file.is_ok() {
+            println!("{}", file_name);
+        } else {
+            // if the file was not removed let the user know
+            println!("Not able to remove {} ", file_name);
+        }
+    }
+}
+
 // this is for the "--list" feature
 fn list_dir(path: &String) {
     // ok(direntry) list of directory entries
@@ -48,6 +63,8 @@ fn print_help() {
     println!("Flags:\n");
     println!("--help  / -h:     print help message");
     println!("--purge / -p:     purge files with one newline char");
+    println!("--remove / -r:    remove a note");
+
 }
 
 fn main() {
@@ -57,8 +74,10 @@ fn main() {
 
     // Give them the help prompt
     if args.len() <= 1 {
+        print_help();
+        return;
         // panic! we do not have the information we need
-        panic!("THE VAULT:\nPlease Provide an title for your new note");
+        //panic!("THE VAULT:\nPlease Provide an title for your new note");
     }
 
     // sanatize the stdin and make the file name out of it
@@ -83,6 +102,22 @@ fn main() {
 
     if args[1] == "-p" || args[1] == "--purge" {
         purge_empty_files(&vault_path);
+        return;
+    }
+
+    if args[1] == "-r" || args[1] == "--remove" {
+        // it makes sense that the args are of length 3 because we only really
+        // want to remove one file
+        if !args.len() == 3 || args.len() <= 2 {
+            // print if they don't know how to use remove
+            print_help();
+            return;
+        }
+        // format into a path
+        let ftr = format!("{}{}", &vault_path, args[2]);
+
+        // go ahead and remove the file
+        remove_note(&ftr, &args[2]);
         return;
     }
 

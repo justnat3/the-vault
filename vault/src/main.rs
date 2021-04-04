@@ -5,20 +5,52 @@ use std::{
     env,
     fs,
 };
+// TODO
+//  * remove based on the --list function
+//  * purge empty files
+
+// TODO: REFACTOR ME PLEASE
+fn purge_empty_files(path: &String) {
+    if let Ok(files) = fs::read_dir(path) {
+        // iter over the files in ok(direntry)
+        for file in files {
+            if let Ok(file) = file {
+                let file_read = fs::read_to_string(&file.path());
+                if let Ok(file_read) = file_read {
+                    let c = file_read.matches("\n").count();
+                    if c == 1 {
+                        let file_removed = fs::remove_file(&file.path());
+                        if file_removed.is_ok() {
+                            println!("Remove File {:?}", &file.path());
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 // this is for the "--list" feature
 fn list_dir(path: &String) {
-    // Ok(DirEntry) list of directory Entries
+    // ok(direntry) list of directory entries
     if let Ok(files) = fs::read_dir(path) {
-        // iter over the files in Ok(DirEntry)
+        // iter over the files in ok(direntry)
         for file in files {
             if let Ok(file) = file {
-                // convert DirEntry to OsString
-                // convert OsString to String and print it out
+                // convert direntry to osstring
+                // convert osstring to string and print it out
                 println!("{}", file.file_name().to_string_lossy());
             }
         }
     }
+}
+
+fn print_help() {
+    println!("Usage: vault [OPTION/TITLE]");
+    println!("Manage Notes");
+    println!("Flags:\n");
+    println!("--help  / -h:     print help message");
+    println!("--purge / -p:     purge files with one newline char");
 }
 
 fn main() {
@@ -44,6 +76,16 @@ fn main() {
         // then we print them out at an unknown size
         list_dir(&vault_path);
         // we can exit here to not open a editor process
+        return;
+    }
+
+    if args[1] == "-h" || args[1] == "--help" {
+        print_help();
+        return;
+    }
+
+    if args[1] == "-p" || args[1] == "--purge" {
+        purge_empty_files(&vault_path);
         return;
     }
 

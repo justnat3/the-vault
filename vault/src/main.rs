@@ -125,7 +125,13 @@ fn main() {
     let vault_editor: String = env::var("VAULT_EDITOR").unwrap();
 
     // panic if the vault path does not exist
-    if !Path::new(&vault_path).exists() { panic!("vault path does not exist"); }
+    if !Path::new(&vault_path).exists() {
+        println!("VAULT_PATH does not exist");
+        std::mem::drop(args);
+        std::mem::drop(vault_path);
+        std::mem::drop(vault_editor);
+        panic!();
+    }
 
     // get the full path final dest for vault_path
     let fpath = format!("{}{}", vault_path, &clean_file);
@@ -133,10 +139,11 @@ fn main() {
     // check if file already exists- if file exists open it in the vault_editor
     if Path::new(&fpath).is_file() {
 
-        std::mem::drop(&vault_path);
-        std::mem::drop(&clean_file);
+        // we just want to clean up after ourselves here
+        std::mem::drop(args);
+
         // launch editor
-        Command::new(&vault_editor)
+        Command::new(vault_editor)
             .arg(&fpath)
             .exec();
 
@@ -147,12 +154,17 @@ fn main() {
         // write the title of the file and start a new line
         fs::write(&fpath, args[1..].join(" ")).expect("problem");
 
-        std::mem::drop(&vault_path);
-        std::mem::drop(&clean_file);
+        // we just want to clean up after ourselves here
+        std::mem::drop(args);
+
         // launch editor
-        Command::new(&vault_editor)
-            .arg(&fpath)
+        Command::new(vault_editor)
+            .arg(fpath)
             .exec();
-    }
-    return;
+
+    } // fpath drops at end of scope
+
+    std::mem::drop(vault_path);
+    // panic_immediate_abort this is safe
+    panic!();
 }

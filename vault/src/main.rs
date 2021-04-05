@@ -138,9 +138,14 @@ fn main() {
         // we just want to clean up after ourselves here
         std::mem::drop(args);
 
-        Command::new(vault_editor)
-            .arg(&fpath)
-            .exec();
+    if cfg!(windows) {
+        // this is spawned through CMD
+        Command::new("start").args(&[vault_editor, fpath]).output().unwrap();
+        } else if cfg!(linux) {
+            Command::new(vault_editor)
+                .arg(&fpath)
+                .exec();
+        }
 
     } else {
 
@@ -152,12 +157,14 @@ fn main() {
         // we just want to clean up after ourselves here
         std::mem::drop(args);
 
-        Command::new(vault_editor)
-            .arg(fpath)
-            .exec();
-
+    if cfg!(windows) {
+        Command::new("start").args(&[vault_editor, fpath]).output().unwrap();
+        } else if cfg!(linux) {
+            Command::new(vault_editor)
+                .arg(&fpath)
+                .exec();
+        }
     }
-
     std::mem::drop(vault_path);
     panic!();
 }

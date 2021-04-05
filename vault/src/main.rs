@@ -17,8 +17,8 @@ fn spawn_vault_editor(vault_editor: String, fpath: String) {
 
 #[cfg(target_os = "windows")]
 fn spawn_vault_editor(vault_editor: String, fpath: String) {
-    Command::new("start")
-        .args(&[vault_editor, fpath])
+    Command::new("cmd.exe")
+        .args(&["/C", "start", vault_editor, fpath])
         .spawn()
         .expect("Could not spawn vault_editor process for unknown reason");
 }

@@ -8,6 +8,21 @@ use std::{
     fs,
 };
 
+#[cfg(target_os = "linux")]
+fn spawn_vault_editor(vault_editor: String, fpath: String) {
+    Command::new(vault_editor)
+        .arg(&fpath)
+        .exec();
+}
+
+#[cfg(target_os = "windows")]
+fn spawn_vault_editor() {
+    Command::new("start")
+        .args(&[vault_editor, fpath])
+        .output()
+        .unwrap();
+}
+
 // TODO: REFACTOR ME PLEASE
 fn purge_empty_files(path: &String) {
     if let Ok(files) = fs::read_dir(path) {
@@ -138,14 +153,8 @@ fn main() {
         // we just want to clean up after ourselves here
         std::mem::drop(args);
 
-    if cfg!(windows) {
-        // this is spawned through CMD
-        Command::new("start").args(&[vault_editor, fpath]).output().unwrap();
-        } else if cfg!(linux) {
-            Command::new(vault_editor)
-                .arg(&fpath)
-                .exec();
-        }
+        // function defined by operating system at the top of the file
+        spawn_vault_editor(vault_editor, fpath);
 
     } else {
 
@@ -157,13 +166,8 @@ fn main() {
         // we just want to clean up after ourselves here
         std::mem::drop(args);
 
-    if cfg!(windows) {
-        Command::new("start").args(&[vault_editor, fpath]).output().unwrap();
-        } else if cfg!(linux) {
-            Command::new(vault_editor)
-                .arg(&fpath)
-                .exec();
-        }
+        // function defined by operating system at the top of the file
+        spawn_vault_editor(vault_editor, fpath);
     }
     std::mem::drop(vault_path);
     panic!();

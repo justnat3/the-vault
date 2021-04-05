@@ -1,4 +1,4 @@
-Vault is a tiny(under 2MB) note management tool made in rust,
+Vault is a tiny(under 2.5MB) note management tool made in rust,
 the idea came from how I personally store my notes, which happens to be in a directory
 called "the_vault". This is compatible with all editors, and I am starting to implement
 more features. Like creating links to projects READMEs and other forms of documentation.

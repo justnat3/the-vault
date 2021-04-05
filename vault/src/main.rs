@@ -9,6 +9,20 @@ use std::{
 };
 
 #[cfg(target_os = "linux")]
+fn make_fpath(vault_path: &String, file: &String) -> String {
+    // get the full path final dest for vault_path
+    let fpath = format!("{}{}", vault_path, file);
+    fpath
+}
+
+#[cfg(target_os = "windows")]
+fn make_fpath(vault_path: &String, file: &String) -> String {
+    // get the full path final dest for vault_path
+    let fpath = format!("{}\\{}", vault_path, file);
+    fpath
+}
+
+#[cfg(target_os = "linux")]
 fn spawn_vault_editor(vault_editor: String, fpath: String) {
     Command::new(vault_editor)
         .arg(&fpath)
@@ -17,8 +31,9 @@ fn spawn_vault_editor(vault_editor: String, fpath: String) {
 
 #[cfg(target_os = "windows")]
 fn spawn_vault_editor(vault_editor: String, fpath: String) {
-    Command::new("cmd.exe")
-        .args(&["/C", "start", vault_editor, fpath])
+    dbg!(&fpath);
+    Command::new(vault_editor)
+        .arg(fpath)
         .spawn()
         .expect("Could not spawn vault_editor process for unknown reason");
 }
@@ -144,7 +159,7 @@ fn main() {
     }
 
     // get the full path final dest for vault_path
-    let fpath = format!("{}{}", vault_path, &clean_file);
+    let fpath = make_fpath(&vault_path, &clean_file);
 
     // check if file already exists- if file exists open it in the vault_editor
     if Path::new(&fpath).is_file() {

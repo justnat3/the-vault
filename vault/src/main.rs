@@ -81,7 +81,6 @@ fn print_help() {
     println!("--help  / -h:     print help message");
     println!("--purge / -p:     purge files with one newline char");
     println!("--remove / -r:    remove a note");
-
 }
 
 fn main() {
@@ -96,9 +95,9 @@ fn main() {
     // sanatize the stdin and make the file name out of it
     let clean_file: String = args[1..].join("-").split_whitespace().collect();
 
-    // Handle Vault_Path
-    let vault_path: String = env::var("VAULT_PATH").unwrap();
-    let vault_editor: String = env::var("VAULT_EDITOR").unwrap();
+    // grab both env vars
+    let vault_path: String = env::var("VAULT_PATH").expect("Vault Path not Found");
+    let vault_editor: String = env::var("VAULT_EDITOR").expect("Vault Editor not Found");
 
     // after we verify args is longer than 1 we can peek at what that arg is
     if args[1] == "-l" || args[1] == "--list" {
@@ -158,10 +157,10 @@ fn main() {
 
     } else {
 
-        fs::File::create(&fpath).unwrap();
+        fs::File::create(&fpath).expect("Could not create file");
 
         // write the title of the file and start a new line
-        fs::write(&fpath, args[1..].join(" ")).expect("problem");
+        fs::write(&fpath, args[1..].join(" ")).expect("could not write to vault file");
 
         // we just want to clean up after ourselves here
         std::mem::drop(args);

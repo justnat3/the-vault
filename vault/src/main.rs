@@ -16,7 +16,7 @@ fn spawn_vault_editor(vault_editor: String, fpath: String) {
 }
 
 #[cfg(target_os = "windows")]
-fn spawn_vault_editor() {
+fn spawn_vault_editor(vault_editor: String, fpath: String) {
     Command::new("start")
         .args(&[vault_editor, fpath])
         .output()

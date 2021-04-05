@@ -1,5 +1,7 @@
+#[cfg(target_os = "linux")]
+use std::os::unix::process::CommandExt;
+
 use std::{
-    os::unix::process::CommandExt,
     process::Command,
     path::Path,
     env,

@@ -19,8 +19,8 @@ fn spawn_vault_editor(vault_editor: String, fpath: String) {
 fn spawn_vault_editor(vault_editor: String, fpath: String) {
     Command::new("start")
         .args(&[vault_editor, fpath])
-        .output()
-        .unwrap();
+        .spawn()
+        .expect("Could not spawn vault_editor process for unknown reason");
 }
 
 // TODO: REFACTOR ME PLEASE
@@ -61,7 +61,6 @@ fn remove_note(path: &String, file_name: &String) {
 
 // this is for the "--list" feature
 fn list_dir(path: &String) {
-    dbg!(path);
     // ok(direntry) list of directory entries
     if let Ok(files) = fs::read_dir(path) {
         // iter over the files in ok(direntry)
@@ -100,8 +99,6 @@ fn main() {
     let vault_path: String = env::var("VAULT_PATH").expect("Vault Path not Found");
     let vault_editor: String = env::var("VAULT_EDITOR").expect("Vault Editor not Found");
 
-    dbg!(&vault_path);
-    dbg!(&vault_editor);
     // after we verify args is longer than 1 we can peek at what that arg is
     if args[1] == "-l" || args[1] == "--list" {
         // we just loop over all of the files in the vault
@@ -148,7 +145,6 @@ fn main() {
 
     // get the full path final dest for vault_path
     let fpath = format!("{}{}", vault_path, &clean_file);
-    dbg!(&fpath);
 
     // check if file already exists- if file exists open it in the vault_editor
     if Path::new(&fpath).is_file() {

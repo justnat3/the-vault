@@ -3,6 +3,10 @@ the idea came from how I personally store my notes, which happens to be in a dir
 called "the_vault". This is compatible with all editors, and I am starting to implement
 more features. Like creating links to projects READMEs and other forms of documentation.
 
+### Feedback Wanted.
+If this is something you are interested in or if this is something you have used & have feedback. Please shoot me a message either by email nreed@linux.com
+or you can create a issue that will be marked feedback or a respective tag.
+
 ### Installation / Building
 Right now you will have compile this project from source, as I do not have this project
 compiled for different distros.
@@ -20,6 +24,7 @@ export VAULT_EDITOR=/path/to/your/editor
 cargo build --release
 ```
 
+WARNING: Windows is not full supported, however a wsl env with a in-terminal editor definetely is.
 windows:
 
 cmd:

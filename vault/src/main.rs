@@ -69,15 +69,11 @@ fn print_help() {
 
 fn main() {
 
-    // take in the arguments
     let args: Vec<String> = env::args().collect();
 
-    // Give them the help prompt
     if args.len() <= 1 {
         print_help();
         return;
-        // panic! we do not have the information we need
-        //panic!("THE VAULT:\nPlease Provide an title for your new note");
     }
 
     // sanatize the stdin and make the file name out of it
@@ -85,6 +81,7 @@ fn main() {
 
     // Handle Vault_Path
     let vault_path: String = env::var("VAULT_PATH").unwrap();
+    let vault_editor: String = env::var("VAULT_EDITOR").unwrap();
 
     // after we verify args is longer than 1 we can peek at what that arg is
     if args[1] == "-l" || args[1] == "--list" {
@@ -113,16 +110,13 @@ fn main() {
             print_help();
             return;
         }
-        // format into a path
+
         let ftr = format!("{}{}", &vault_path, args[2]);
 
         // go ahead and remove the file
         remove_note(&ftr, &args[2]);
         return;
     }
-
-    // Handle Vault_Editor path
-    let vault_editor: String = env::var("VAULT_EDITOR").unwrap();
 
     // panic if the vault path does not exist
     if !Path::new(&vault_path).exists() {
@@ -142,13 +136,12 @@ fn main() {
         // we just want to clean up after ourselves here
         std::mem::drop(args);
 
-        // launch editor
         Command::new(vault_editor)
             .arg(&fpath)
             .exec();
 
     } else {
-        // create a new note
+
         fs::File::create(&fpath).unwrap();
 
         // write the title of the file and start a new line
@@ -157,14 +150,12 @@ fn main() {
         // we just want to clean up after ourselves here
         std::mem::drop(args);
 
-        // launch editor
         Command::new(vault_editor)
             .arg(fpath)
             .exec();
 
-    } // fpath drops at end of scope
+    }
 
     std::mem::drop(vault_path);
-    // avoid abort, damn you nyx.
     panic!();
 }

@@ -24,7 +24,8 @@ export VAULT_EDITOR=/path/to/your/editor
 cargo build --release
 ```
 
-WARNING: Windows is not full supported, however a wsl env with a in-terminal editor definetely is.
+**WARNING: Windows is not full supported, however a wsl env with a in-terminal editor definetely is.**
+
 windows:
 
 cmd:

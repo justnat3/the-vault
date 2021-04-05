@@ -2,7 +2,9 @@
 
 ### Somethings that we should look into implementing
 []  add windows support for vault
+
 []  parsing for "projects" DirEntries - this would give us support for like catagories
+
 []  being able to link (symlink) READMEs from projects to store in vault.
     or really any file that you don't want to store directly in vault
     this would have to be a pre-existing file to link in vault but non the less

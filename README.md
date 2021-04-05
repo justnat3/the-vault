@@ -57,7 +57,7 @@ cargo build --release
 5. Click `Edit`
 6. click `new`
 7. Put the path to your vault.exe - recommended to put it in C:/Program Files
-8. Please include the file name in the path on the env var you just added
+8. **Please do not include the file name in the path on the env var you just added**
 9. close your command_prompt or powershell and reopen it.
 
 ### Usage

@@ -2,17 +2,28 @@
 use std::os::unix::process::CommandExt;
 
 use std::{
+    io::Result,
+    path::PathBuf,
     process::Command,
     path::Path,
     env,
     fs,
 };
 
+struct VaultContext {
+    vault_path: String,
+    vault_editor: String,
+
+}
+
 #[cfg(target_os = "linux")]
-fn make_fpath(vault_path: &String, file: &String) -> String {
+fn make_fpath(vault_path: String, file: String) -> PathBuf{
+    let mut path = PathBuf::new();
+    path.push(vault_path);
+    path.push(file);
     // get the full path final dest for vault_path
-    let fpath = format!("{}{}", vault_path, file);
-    fpath
+    //let fpath = format!("{}{}", vault_path, file);
+    path
 }
 
 #[cfg(target_os = "windows")]
@@ -23,9 +34,10 @@ fn make_fpath(vault_path: &String, file: &String) -> String {
 }
 
 #[cfg(target_os = "linux")]
-fn spawn_vault_editor(vault_editor: String, fpath: String) {
+fn spawn_vault_editor(vault_editor: String, fpath: PathBuf) {
+    let path = fpath.to_string_lossy();
     Command::new(vault_editor)
-        .arg(&fpath)
+        .arg(&*path)
         .exec();
 }
 
@@ -89,14 +101,32 @@ fn list_dir(path: &String) {
     }
 }
 
+fn omit_file_extension() { todo!(); }
+
 fn print_help() {
     println!("Usage: vault [OPTION/TITLE]");
     println!("Manage Notes");
-    println!("Flags:\n");
-    println!("--help  / -h:     print help message");
-    println!("--purge / -p:     purge files with one newline char");
-    println!("--remove / -r:    remove a note");
+    println!("\nFlags:\n");
+    println!("--help   / -h:     print help message");
+    println!("--purge  / -p:     purge files with one newline char");
+    println!("--remove / -r:     remove a note");
+    println!("--list   / -l:     list all of your notes\n");
 }
+
+// removing the link is just removing the note because the note you are accessing
+// is actually just a symlink
+#[cfg(target_os = "linux")]
+fn create_link(source_file: String, lnk_name: String) -> Result<()> {
+    std::os::unix::fs::symlink(source_file, lnk_name)?;
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn verify_path(path_to_lnk: String) { todo!(); }
+#[cfg(target_os = "windows")]
+fn create_link(source_file: String, lnk_name: String) { todo!(); }
+
+fn search_vault() { todo!(); }
 
 fn main() {
 
@@ -120,6 +150,15 @@ fn main() {
         // then we print them out at an unknown size
         list_dir(&vault_path);
         // we can exit here to not open a editor process
+        return;
+    }
+
+    // args have to be four, we are expecting two paths
+    if args[1] == "-s" || args[1] == "--link" && args.len() == 4 {
+        // create a symlink for the project file
+        let lnk = create_link(args[3].clone(), args[4].clone());
+        // check if we actually created that symlink
+        if lnk.is_ok() { println!("link created!"); } else { println!("link created!"); }
         return;
     }
 
@@ -159,7 +198,7 @@ fn main() {
     }
 
     // get the full path final dest for vault_path
-    let fpath = make_fpath(&vault_path, &clean_file);
+    let fpath = make_fpath(vault_path, clean_file);
 
     // check if file already exists- if file exists open it in the vault_editor
     if Path::new(&fpath).is_file() {
@@ -183,6 +222,6 @@ fn main() {
         // function defined by operating system at the top of the file
         spawn_vault_editor(vault_editor, fpath);
     }
-    std::mem::drop(vault_path);
+
     panic!();
 }

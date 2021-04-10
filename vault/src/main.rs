@@ -202,6 +202,43 @@ fn create_link(source_file: String, lnk_name: String) { todo!(); }
 
 fn search_vault() { todo!(); }
 
+// this should also not have the case that you want to "vault another file"
+// that should never happen in the first place. stick it in the vault folder or symlink it
+/// Make sure that we strip and replace any path seperators in the name of the file
+fn strip_seperators(s_file: String) -> String {
+    // make no assumptions, s_file may have a path seperator in it
+    // PathBuf will just allow you to push it thinking its the rest of the path
+    if s_file.contains("\\")  {
+        // make sure there is only one hyphen next to a seperator
+        if s_file.contains("-\\") {
+            let s_file = s_file.replace("-\\", "-");
+            let s_file = s_file.replace("\\", "-");
+            return s_file;
+        } else {
+            // replace seperator with hyphen
+            let s_file = s_file.replace("\\", "-");
+            return s_file;
+        };
+    }
+
+    if s_file.contains("/")  {
+        // make sure there is only one hyphen next to a seperator
+        if s_file.contains("-/") {
+            let s_file = s_file.replace("-/", "-");
+            let s_file = s_file.replace("/", "-");
+            return s_file;
+        } else {
+            // replace seperator with hyphen
+            let s_file = s_file.replace("/", "-");
+            return s_file;
+        };
+    }
+
+    // later in the program may still fail because of this
+    // however we are assume at this point there is no seperators
+    s_file
+}
+
 fn main() {
 
     let args: Vec<String> = env::args().collect();
@@ -213,6 +250,11 @@ fn main() {
     }
 
     let s_file: String = args[1..].join("-").split_whitespace().collect();
+
+    // make sure there are no path seperators in the file name
+    let s_file = strip_seperators(s_file);
+
+
     let vault_path: String = env::var("VAULT_PATH").expect("Vault Path not Found");
     let vault_editor: String = env::var("VAULT_EDITOR").expect("Vault Editor not Found");
     let ctx = VaultContext { vault_path, vault_editor, s_file };
@@ -315,6 +357,7 @@ fn main() {
 
     } else {
 
+        dbg!(&fpath);
         fs::File::create(&fpath).expect("Could not create file");
 
         // write the title of the file and start a new line

@@ -2,6 +2,8 @@
 use std::os::unix::process::CommandExt;
 
 use std::{
+    io::Error,
+    io::ErrorKind,
     io::Result,
     path::PathBuf,
     process::Command,
@@ -10,29 +12,59 @@ use std::{
     fs,
 };
 
+// XXX NEW FEATS
+//      search
+//      rename
+//
+// XXX be able to give notes a description and just use that in the note?
+// XXX search should instead be a match, so you can search for multiple files
+//     and for one file all at the same time
+// XXX
+
+
+/// Keeping our Vault's Context alive
 struct VaultContext {
+    /// path to the directory that holds all of our vault files
     vault_path: String,
+    /// path to the editor executable
     vault_editor: String,
+    /// the file that the user passes in that they want to edit
+    /// this only applies if they pass in a file that they want to edit
+    s_file: String // this all though be changed to PathBufs
+}
+
+/// collection of functions that take advantage of the VaultContext structure
+impl VaultContext {
+    /// Create a new VaultContext
+    fn new(vp: String, ve: String, sf: String) -> Self {
+        Self { vault_path: vp, vault_editor: ve, s_file: sf }
+    }
+
+    /// Create full path context to verify later in the program
+    #[cfg(target_os = "linux")]
+    fn make_fpath(&self) -> PathBuf {
+        let mut path = PathBuf::new();
+        path.push(&self.vault_path);
+        path.push(&self.s_file);
+
+        path
+    }
+
+    /// Create full path context to verify later in the program but windows
+    #[cfg(target_os = "windows")]
+    fn make_fpath(&self) -> String {
+        let mut path = PathBuf::new();
+
+        path.push(self.vault_path);
+        path.push(self.file);
+
+        path
+    }
 
 }
 
-#[cfg(target_os = "linux")]
-fn make_fpath(vault_path: String, file: String) -> PathBuf{
-    let mut path = PathBuf::new();
-    path.push(vault_path);
-    path.push(file);
-    // get the full path final dest for vault_path
-    //let fpath = format!("{}{}", vault_path, file);
-    path
-}
-
-#[cfg(target_os = "windows")]
-fn make_fpath(vault_path: &String, file: &String) -> String {
-    // get the full path final dest for vault_path
-    let fpath = format!("{}\\{}", vault_path, file);
-    fpath
-}
-
+// All execve does is take the parent process image and replace it with new process
+/// This uses the execve syscall under the hood
 #[cfg(target_os = "linux")]
 fn spawn_vault_editor(vault_editor: String, fpath: PathBuf) {
     let path = fpath.to_string_lossy();
@@ -41,9 +73,9 @@ fn spawn_vault_editor(vault_editor: String, fpath: PathBuf) {
         .exec();
 }
 
+/// this is currently unsupported
 #[cfg(target_os = "windows")]
 fn spawn_vault_editor(vault_editor: String, fpath: String) {
-    dbg!(&fpath);
     Command::new(vault_editor)
         .arg(fpath)
         .spawn()
@@ -86,19 +118,58 @@ fn remove_note(path: &String, file_name: &String) {
     }
 }
 
+fn rename_note(old: PathBuf, new: PathBuf) -> Result<()> {
+    // if the path does not already exist go ahead and rename it
+    if Path::new(&new).exists() {
+        Err(Error::new(ErrorKind::Other, "path already exists"))
+    } else {
+        fs::rename(old, new)?;
+        Ok(())
+    }
+}
+
+/// the output is the display of all avaliable files based on a search
+///
+/// vault -s file
+///
+/// this may return one or more matches based on the input string
+/// treat this more of a grep that highlights the files more than search for a specific
+/// file this is will also allow for smaller search inputs
+fn search_for_file(k_word: &String, ctx_path: PathBuf) {
+    // ok(direntry) list of directory entries
+    if let Ok(files) = fs::read_dir(ctx_path) {
+        println!("\n         Found");
+        println!("  -----------------------");
+        // iter over the files in ok(direntry)
+        for file in files {
+            if let Ok(file) = file {
+                if file.file_name().to_string_lossy().contains(k_word) {
+                    // convert direntry to osstring
+                    // convert osstring to string and print it out
+                    println!("    {}", file.file_name().to_string_lossy());
+                }
+            }
+        }
+    }
+    print!("\n");
+}
+
 // this is for the "--list" feature
 fn list_dir(path: &String) {
     // ok(direntry) list of directory entries
     if let Ok(files) = fs::read_dir(path) {
+        println!("\n         Vault Files");
+        println!("  --------------------------");
         // iter over the files in ok(direntry)
         for file in files {
             if let Ok(file) = file {
                 // convert direntry to osstring
                 // convert osstring to string and print it out
-                println!("{}", file.file_name().to_string_lossy());
+                println!("  {}", file.file_name().to_string_lossy());
             }
         }
     }
+    print!("\n");
 }
 
 fn omit_file_extension() { todo!(); }
@@ -107,10 +178,12 @@ fn print_help() {
     println!("Usage: vault [OPTION/TITLE]");
     println!("Manage Notes");
     println!("\nFlags:\n");
-    println!("--help   / -h:     print help message");
-    println!("--purge  / -p:     purge files with one newline char");
-    println!("--remove / -r:     remove a note");
-    println!("--list   / -l:     list all of your notes\n");
+    println!("--help    / -h:     print help message");
+    println!("--purge   / -p:     purge files with one newline char");
+    println!("--remove  / -r:     remove a note");
+    println!("--list    / -l:     list all of your notes");
+    println!("--search  / -s:     search by keyword, display what matches the keyword");
+    println!("--rename  / -r:      rename a note\n");
 }
 
 // removing the link is just removing the note because the note you are accessing
@@ -126,39 +199,73 @@ fn verify_path(path_to_lnk: String) { todo!(); }
 #[cfg(target_os = "windows")]
 fn create_link(source_file: String, lnk_name: String) { todo!(); }
 
+
 fn search_vault() { todo!(); }
 
 fn main() {
 
     let args: Vec<String> = env::args().collect();
 
+    // bounds checking
     if args.len() <= 1 {
         print_help();
         return;
     }
 
-    // sanatize the stdin and make the file name out of it
-    let clean_file: String = args[1..].join("-").split_whitespace().collect();
-
-    // grab both env vars
+    let s_file: String = args[1..].join("-").split_whitespace().collect();
     let vault_path: String = env::var("VAULT_PATH").expect("Vault Path not Found");
     let vault_editor: String = env::var("VAULT_EDITOR").expect("Vault Editor not Found");
+    let ctx = VaultContext { vault_path, vault_editor, s_file };
+
+    if args[1] == "-r" || args[1] == "--rename" {
+        // bounds checking
+        if args.len() != 4 {
+            print_help();
+            return;
+        }
+        // create the old path as pathbuf
+        let mut old = PathBuf::new();
+        old.push(&ctx.vault_path);
+        // args-3 is the source file
+        old.push(&args[2]);
+
+        // create a path that represent the new file
+        let mut new = PathBuf::new();
+        new.push(&ctx.vault_path);
+        // args-4 is the new file name
+        // to see if that file name already exists we verify that in the rename func
+        dbg!(&args);
+        new.push(&args[3]);
+
+        if rename_note(old, new).is_ok() {
+            println!("Note Renamed {}", &args[3]);
+        } else {
+            println!("Note Already Exists {}", &args[3]);
+        }
+
+        return;
+    }
 
     // after we verify args is longer than 1 we can peek at what that arg is
     if args[1] == "-l" || args[1] == "--list" {
         // we just loop over all of the files in the vault
         // then we print them out at an unknown size
-        list_dir(&vault_path);
+        list_dir(&ctx.vault_path);
         // we can exit here to not open a editor process
         return;
     }
 
-    // args have to be four, we are expecting two paths
-    if args[1] == "-s" || args[1] == "--link" && args.len() == 4 {
-        // create a symlink for the project file
-        let lnk = create_link(args[3].clone(), args[4].clone());
-        // check if we actually created that symlink
-        if lnk.is_ok() { println!("link created!"); } else { println!("link created!"); }
+    if args[1] == "-s" || args[1] == "--search" {
+        // bounds checking
+        if args.len() != 3 {
+            print_help();
+            return;
+        }
+
+        let mut n_pbuf = PathBuf::new();
+        n_pbuf.push(&ctx.vault_path);
+        search_for_file(&args[2], n_pbuf);
+
         return;
     }
 
@@ -168,7 +275,7 @@ fn main() {
     }
 
     if args[1] == "-p" || args[1] == "--purge" {
-        purge_empty_files(&vault_path);
+        purge_empty_files(&ctx.vault_path);
         return;
     }
 
@@ -181,7 +288,7 @@ fn main() {
             return;
         }
 
-        let ftr = format!("{}{}", &vault_path, args[2]);
+        let ftr = format!("{}{}", &ctx.vault_path, args[2]);
 
         // go ahead and remove the file
         remove_note(&ftr, &args[2]);
@@ -189,16 +296,14 @@ fn main() {
     }
 
     // panic if the vault path does not exist
-    if !Path::new(&vault_path).exists() {
+    if !Path::new(&ctx.vault_path).exists() {
         println!("VAULT_PATH does not exist");
         std::mem::drop(args);
-        std::mem::drop(vault_path);
-        std::mem::drop(vault_editor);
         panic!();
     }
 
     // get the full path final dest for vault_path
-    let fpath = make_fpath(vault_path, clean_file);
+    let fpath = ctx.make_fpath();
 
     // check if file already exists- if file exists open it in the vault_editor
     if Path::new(&fpath).is_file() {
@@ -207,7 +312,7 @@ fn main() {
         std::mem::drop(args);
 
         // function defined by operating system at the top of the file
-        spawn_vault_editor(vault_editor, fpath);
+        spawn_vault_editor(ctx.vault_editor, fpath);
 
     } else {
 
@@ -220,7 +325,7 @@ fn main() {
         std::mem::drop(args);
 
         // function defined by operating system at the top of the file
-        spawn_vault_editor(vault_editor, fpath);
+        spawn_vault_editor(ctx.vault_editor, fpath);
     }
 
     panic!();

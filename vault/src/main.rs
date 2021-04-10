@@ -246,7 +246,7 @@ fn main() {
     }
 
     // after we verify args is longer than 1 we can peek at what that arg is
-    if args[1] == "-l" || args[1] == "--list" {
+    if args[1] == "list" {
         // we just loop over all of the files in the vault
         // then we print them out at an unknown size
         list_dir(&ctx.vault_path);
@@ -254,7 +254,7 @@ fn main() {
         return;
     }
 
-    if args[1] == "-s" || args[1] == "--search" {
+    if args[1] == "search" {
         // bounds checking
         if args.len() != 3 {
             print_help();

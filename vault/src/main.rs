@@ -217,7 +217,7 @@ fn main() {
     let vault_editor: String = env::var("VAULT_EDITOR").expect("Vault Editor not Found");
     let ctx = VaultContext { vault_path, vault_editor, s_file };
 
-    if args[1] == "-r" || args[1] == "--rename" {
+    if args[1] == "rename" {
         // bounds checking
         if args.len() != 4 {
             print_help();
@@ -234,7 +234,6 @@ fn main() {
         new.push(&ctx.vault_path);
         // args-4 is the new file name
         // to see if that file name already exists we verify that in the rename func
-        dbg!(&args);
         new.push(&args[3]);
 
         if rename_note(old, new).is_ok() {
@@ -279,7 +278,7 @@ fn main() {
         return;
     }
 
-    if args[1] == "-r" || args[1] == "--remove" {
+    if args[1] == "remove" {
         // it makes sense that the args are of length 3 because we only really
         // want to remove one file
         if !args.len() == 3 || args.len() <= 2 {

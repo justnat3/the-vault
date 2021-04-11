@@ -12,15 +12,9 @@ use std::{
     fs,
 };
 
-// XXX NEW FEATS
-//      search
-//      rename
-//
 // XXX be able to give notes a description and just use that in the note?
 // XXX search should instead be a match, so you can search for multiple files
 //     and for one file all at the same time
-// XXX
-
 
 /// Keeping our Vault's Context alive
 struct VaultContext {
@@ -156,6 +150,7 @@ fn search_for_file(k_word: &String, ctx_path: PathBuf) {
 
 // this is for the "--list" feature
 fn list_dir(path: &String) {
+    let mut results: Vec<_> = Vec::new();
     // ok(direntry) list of directory entries
     if let Ok(files) = fs::read_dir(path) {
         println!("\n         Vault Files");
@@ -163,11 +158,16 @@ fn list_dir(path: &String) {
         // iter over the files in ok(direntry)
         for file in files {
             if let Ok(file) = file {
+                results.push(file.file_name().to_string_lossy().to_string());
                 // convert direntry to osstring
                 // convert osstring to string and print it out
-                println!("  {}", file.file_name().to_string_lossy());
             }
         }
+    }
+
+    results.sort();
+    for file in results {
+        println!("   {}", file);
     }
     print!("\n");
 }

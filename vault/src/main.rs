@@ -323,6 +323,7 @@ fn main() {
     }
 
     // after we verify args is longer than 1 we can peek at what that arg is
+
     if args[1] == "-l" || args[1] == "list" || args[1] == "ls" {
         // we just loop over all of the files in the vault
         // then we print them out at an unknown size

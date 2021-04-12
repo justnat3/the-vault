@@ -35,7 +35,6 @@ impl VaultContext {
     }
 
     /// Create full path context to verify later in the program
-    #[cfg(target_os = "linux")]
     fn make_fpath(&self) -> PathBuf {
         let mut path = PathBuf::new();
         path.push(&self.vault_path);
@@ -43,18 +42,6 @@ impl VaultContext {
 
         path
     }
-
-    /// Create full path context to verify later in the program but windows
-    #[cfg(target_os = "windows")]
-    fn make_fpath(&self) -> String {
-        let mut path = PathBuf::new();
-
-        path.push(self.vault_path);
-        path.push(self.file);
-
-        path
-    }
-
 }
 
 // All execve does is take the parent process image and replace it with new process
@@ -77,6 +64,11 @@ fn spawn_vault_editor(vault_editor: String, fpath: String) {
 }
 
 // TODO: REFACTOR ME PLEASE
+/// if there are files with the header # bleh blah
+///
+/// ^ new line
+/// and there is nothing else in the file then we can assume that the file is a empty
+/// initialized note.
 fn purge_empty_files(path: &String) {
     if let Ok(files) = fs::read_dir(path) {
         // iter over the files in ok(direntry)
@@ -97,6 +89,7 @@ fn purge_empty_files(path: &String) {
     }
 }
 
+/// remove notes without having to interact with the vault path
 fn remove_note(path: &String, file_name: &String) {
     // if the path contains the filename as verification then we can go ahead
     // and delete that file.
@@ -104,7 +97,7 @@ fn remove_note(path: &String, file_name: &String) {
         //verify that the file was removed
         let remove_file = fs::remove_file(path);
         if remove_file.is_ok() {
-            println!("{}", file_name);
+            println!("\x1b[0;31mRemoved \x1b[0m{}", file_name);
         } else {
             // if the file was not removed let the user know
             println!("Not able to remove {} ", file_name);
@@ -112,6 +105,7 @@ fn remove_note(path: &String, file_name: &String) {
     }
 }
 
+/// rename notes without having to interact with the vault path
 fn rename_note(old: PathBuf, new: PathBuf) -> Result<()> {
     // if the path does not already exist go ahead and rename it
     if Path::new(&new).exists() {
@@ -130,17 +124,16 @@ fn rename_note(old: PathBuf, new: PathBuf) -> Result<()> {
 /// treat this more of a grep that highlights the files more than search for a specific
 /// file this is will also allow for smaller search inputs
 fn search_for_file(k_word: &String, ctx_path: PathBuf) {
+    println!("");
     // ok(direntry) list of directory entries
     if let Ok(files) = fs::read_dir(ctx_path) {
-        println!("\n         Found");
-        println!("  -----------------------");
         // iter over the files in ok(direntry)
         for file in files {
             if let Ok(file) = file {
                 if file.file_name().to_string_lossy().contains(k_word) {
                     // convert direntry to osstring
                     // convert osstring to string and print it out
-                    println!("    {}", file.file_name().to_string_lossy());
+                    println!("\x1b[32mFound\x1b[0m {}", file.file_name().to_string_lossy());
                 }
             }
         }
@@ -148,16 +141,29 @@ fn search_for_file(k_word: &String, ctx_path: PathBuf) {
     print!("\n");
 }
 
-// this is for the "--list" feature
+/// a way to list all the vault files in alphabetical order
 fn list_dir(path: &String) {
     let mut results: Vec<_> = Vec::new();
     // ok(direntry) list of directory entries
     if let Ok(files) = fs::read_dir(path) {
-        println!("\n         Vault Files");
+        println!("\n         \x1b[7mVault Files\x1b[0m");
         println!("  --------------------------");
         // iter over the files in ok(direntry)
         for file in files {
             if let Ok(file) = file {
+
+                // if the file is a symlink we should include a link tag
+                let attr = fs::read_link(file.path());
+                if attr.is_ok() {
+                    let is_sym = format!(
+                            "{} <- \x1b[32mLink\x1b[0m",
+                            file.file_name().to_string_lossy().to_string()
+                            );
+
+                    results.push(is_sym);
+                    continue
+                }
+
                 results.push(file.file_name().to_string_lossy().to_string());
                 // convert direntry to osstring
                 // convert osstring to string and print it out
@@ -172,9 +178,20 @@ fn list_dir(path: &String) {
     print!("\n");
 }
 
-fn omit_file_extension() { todo!(); }
+fn view_symlink(path: PathBuf) -> Result<()> {
+    let attr = fs::read_link(path);
+    if let Ok(attr) = attr {
+        let attr = attr.into_os_string().into_string().expect("could not conver to string");
+        println!("\x1b[32mLinked To\x1b[0m: {}", attr);
+        Ok(())
+    } else {
+        Err(Error::new(ErrorKind::Other, "File is not a symlink"))
+    }
+}
 
+/// print help function
 fn print_help() {
+    // TODO FOR THE LOVE OF EVERYTHING HOLY REWRITE ME
     println!("Usage: vault [OPTION/TITLE]");
     println!("Manage Notes");
     println!("\nFlags:\n");
@@ -189,18 +206,10 @@ fn print_help() {
 // removing the link is just removing the note because the note you are accessing
 // is actually just a symlink
 #[cfg(target_os = "linux")]
-fn create_link(source_file: String, lnk_name: String) -> Result<()> {
+fn create_link(source_file: PathBuf, lnk_name: PathBuf) -> Result<()> {
     std::os::unix::fs::symlink(source_file, lnk_name)?;
     Ok(())
 }
-
-#[cfg(target_os = "windows")]
-fn verify_path(path_to_lnk: String) { todo!(); }
-#[cfg(target_os = "windows")]
-fn create_link(source_file: String, lnk_name: String) { todo!(); }
-
-
-fn search_vault() { todo!(); }
 
 // this should also not have the case that you want to "vault another file"
 // that should never happen in the first place. stick it in the vault folder or symlink it
@@ -259,7 +268,33 @@ fn main() {
     let vault_editor: String = env::var("VAULT_EDITOR").expect("Vault Editor not Found");
     let ctx = VaultContext { vault_path, vault_editor, s_file };
 
-    if args[1] == "rename" {
+    if args[1] == "link" {
+        // some bounds checking
+        if args.len() != 4 {
+            print_help();
+            return;
+        }
+
+        // the first arg or arg-2 is what file you plan to link
+        let link_path = PathBuf::from(&args[2]);
+        let link_path = fs::canonicalize(&link_path).expect("Could not create path");
+
+
+        // the second arg or arg-3 is what the link name should be
+        let mut link_name = PathBuf::new();
+        link_name.push(&ctx.vault_path);
+
+        // create link address
+        link_name.push(&args[3]);
+
+        // finally we can create the link
+        create_link(link_path, link_name).expect("Failed to create the link");
+        println!("Link Created! {}", &args[3]);
+
+        return;
+    }
+
+    if args[1] == "rename" || args[1] == "mv" {
         // bounds checking
         if args.len() != 4 {
             print_help();
@@ -296,6 +331,21 @@ fn main() {
         return;
     }
 
+    if args[1] == "view" {
+        if args.len() != 3 {
+            print_help();
+            return
+        }
+        // there will be this idea that you can look into files
+        let mut n_path = PathBuf::new();
+        n_path.push(&ctx.vault_path);
+        n_path.push(&args[2]);
+        let view = view_symlink(n_path);
+
+        // FIXME this is kind of ugly
+        if view.is_ok() { return; } else { return; }
+    }
+
     if args[1] == "-s" || args[1] == "search" {
         // bounds checking
         if args.len() != 3 {
@@ -320,7 +370,7 @@ fn main() {
         return;
     }
 
-    if args[1] == "remove" {
+    if args[1] == "remove" || args[1] == "rm" {
         // it makes sense that the args are of length 3 because we only really
         // want to remove one file
         if !args.len() == 3 || args.len() <= 2 {
@@ -357,7 +407,6 @@ fn main() {
 
     } else {
 
-        dbg!(&fpath);
         fs::File::create(&fpath).expect("Could not create file");
 
         // write the title of the file and start a new line

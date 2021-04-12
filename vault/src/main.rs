@@ -323,7 +323,7 @@ fn main() {
     }
 
     // after we verify args is longer than 1 we can peek at what that arg is
-    if args[1] == "-l" || args[1] == "list" {
+    if args[1] == "-l" || args[1] == "list" || args[1] == "ls" {
         // we just loop over all of the files in the vault
         // then we print them out at an unknown size
         list_dir(&ctx.vault_path);
@@ -407,10 +407,15 @@ fn main() {
 
     } else {
 
+        // create the file if we can
         fs::File::create(&fpath).expect("Could not create file");
 
-        // write the title of the file and start a new line
-        fs::write(&fpath, args[1..].join(" ")).expect("could not write to vault file");
+        // header for markdown file formats
+        let header: String = format!("# {}", args[1..].join(" "));
+
+        // write header and title into file
+        fs::write(&fpath, header)
+            .expect("could not write to vault file");
 
         // we just want to clean up after ourselves here
         std::mem::drop(args);

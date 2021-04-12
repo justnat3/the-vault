@@ -4,12 +4,9 @@ the idea came from how I personally store my notes, which happens to be in a dir
 called "the_vault". This is compatible with all editors, and I am starting to implement
 more features. Like creating links to projects READMEs and other forms of documentation.
 
-### Feedback Wanted.
-If this is something you are interested in or if this is something you have used & have feedback. Please shoot me a message either by email nreed@linux.com
+### Feedback Wanted.  If this is something you are interested in or if this is something you have used & have feedback. Please shoot me a message either by email nreed@linux.com
 or you can create a issue that will be marked feedback or a respective tag.
 
-## Table of Contents
-* [Table of Contents](#table-of-contents)
 * [Installation](#installation)
   * [generic-linux](#generic-linux)
 * [Usage](#usage)
@@ -23,8 +20,6 @@ or you can create a issue that will be marked feedback or a respective tag.
     * [Viewing a Vault-Links Path](#viewing-a-vault-links-path)
 
 ### Installation
-Right now you will have compile this project from source, as I do not have this project
-compiled for different distros.
 
 #### generic-linux:
 
@@ -39,7 +34,7 @@ export VAULT_EDITOR=/path/to/your/editor
 cargo build --release
 ```
 
-## **WARNING: Windows is not full supported, however a wsl env with a in-terminal editor definetely is.**
+### **WARNING: Windows is not full supported, however a wsl env with a in-terminal editor definetely is.**
 
 windows:
 
@@ -129,7 +124,7 @@ vault search note-keyword
 #### Linking a project file to vault
 ```bash
 # this would create a link called "foo" in vault -> this would then edit your project file
-vault link /path/to/project-file foo 
+vault link /path/to/project-file foo
 
 # to edit your project file you would then just execute this
 vault foo

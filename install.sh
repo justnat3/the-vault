@@ -1,5 +1,5 @@
+#!/bin/bash
 # Thank you nyx!
-
 cargo build --manifest-path vault/Cargo.toml --release
 sudo cp ./target/release/vault /usr/local/bin/vault
 mkdir $HOME/.notes

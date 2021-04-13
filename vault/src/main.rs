@@ -29,11 +29,6 @@ struct VaultContext {
 
 /// collection of functions that take advantage of the VaultContext structure
 impl VaultContext {
-    /// Create a new VaultContext
-    fn new(vp: String, ve: String, sf: String) -> Self {
-        Self { vault_path: vp, vault_editor: ve, s_file: sf }
-    }
-
     /// Create full path context to verify later in the program
     fn make_fpath(&self) -> PathBuf {
         let mut path = PathBuf::new();

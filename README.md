@@ -32,6 +32,7 @@ export VAULT_PATH=/path/to/vault/
 
 # set a valid path to your editor
 export VAULT_EDITOR=/path/to/your/editor
+# the path to your editor should not have a leading forward slash
 
 # after cloning the repo and cd'ing into it.Just run cargo build --release
 cargo build --release

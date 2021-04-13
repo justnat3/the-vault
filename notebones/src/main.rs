@@ -17,22 +17,22 @@ use std::{
 //     and for one file all at the same time
 
 /// Keeping our Vault's Context alive
-struct VaultContext {
-    /// path to the directory that holds all of our vault files
-    vault_path: String,
+struct BoneMarrow {
+    /// path to the directory that holds all of our bones files
+    bones_path: String,
     /// path to the editor executable
-    vault_editor: String,
+    bones_editor: String,
     /// the file that the user passes in that they want to edit
     /// this only applies if they pass in a file that they want to edit
     s_file: String // this all though be changed to PathBufs
 }
 
-/// collection of functions that take advantage of the VaultContext structure
-impl VaultContext {
+/// collection of functions that take advantage of the BoneMarrow structure
+impl BoneMarrow {
     /// Create full path context to verify later in the program
     fn make_fpath(&self) -> PathBuf {
         let mut path = PathBuf::new();
-        path.push(&self.vault_path);
+        path.push(&self.bones_path);
         path.push(&self.s_file);
 
         path
@@ -42,20 +42,20 @@ impl VaultContext {
 // All execve does is take the parent process image and replace it with new process
 /// This uses the execve syscall under the hood
 #[cfg(target_os = "linux")]
-fn spawn_vault_editor(vault_editor: String, fpath: PathBuf) {
+fn spawn_bones_editor(bones_editor: String, fpath: PathBuf) {
     let path = fpath.to_string_lossy();
-    Command::new(vault_editor)
+    Command::new(bones_editor)
         .arg(&*path)
         .exec();
 }
 
 /// this is currently unsupported
 #[cfg(target_os = "windows")]
-fn spawn_vault_editor(vault_editor: String, fpath: String) {
-    Command::new(vault_editor)
+fn spawn_bones_editor(bones_editor: String, fpath: String) {
+    Command::new(bones_editor)
         .arg(fpath)
         .spawn()
-        .expect("Could not spawn vault_editor process for unknown reason");
+        .expect("Could not spawn bones_editor process for unknown reason");
 }
 
 // TODO: REFACTOR ME PLEASE
@@ -84,23 +84,19 @@ fn purge_empty_files(path: &String) {
     }
 }
 
-/// remove notes without having to interact with the vault path
-fn remove_note(path: &String, file_name: &String) {
-    // if the path contains the filename as verification then we can go ahead
-    // and delete that file.
-    if path.contains(file_name) {
-        //verify that the file was removed
-        let remove_file = fs::remove_file(path);
-        if remove_file.is_ok() {
-            println!("\x1b[0;31mRemoved \x1b[0m{}", file_name);
-        } else {
-            // if the file was not removed let the user know
-            println!("Not able to remove {} ", file_name);
-        }
+/// remove notes without having to interact with the bones path
+fn remove_note(path: &PathBuf, file_name: &String) -> Result<()>{
+    // convert path(PathBuf) to &Path with .to_path()
+    if path.as_path().exists() {
+        fs::remove_file(path)?;
+        println!("\x1b[0;31mRemoved \x1b[0m{}", file_name);
+        Ok(())
+    } else {
+        Err(Error::new(ErrorKind::Other, "Could not remove file"))
     }
 }
 
-/// rename notes without having to interact with the vault path
+/// rename notes without having to interact with the bones path
 fn rename_note(old: PathBuf, new: PathBuf) -> Result<()> {
     // if the path does not already exist go ahead and rename it
     if Path::new(&new).exists() {
@@ -113,7 +109,7 @@ fn rename_note(old: PathBuf, new: PathBuf) -> Result<()> {
 
 /// the output is the display of all avaliable files based on a search
 ///
-/// vault -s file
+/// bones -s file
 ///
 /// this may return one or more matches based on the input string
 /// treat this more of a grep that highlights the files more than search for a specific
@@ -136,7 +132,7 @@ fn search_for_file(k_word: &String, ctx_path: PathBuf) {
     print!("\n");
 }
 
-/// a way to list all the vault files in alphabetical order
+/// a way to list all the bones files in alphabetical order
 fn list_dir(path: &String) {
     let mut results: Vec<_> = Vec::new();
     // ok(direntry) list of directory entries
@@ -187,15 +183,6 @@ fn view_symlink(path: PathBuf) -> Result<()> {
 /// print help function
 fn print_help() {
     // TODO FOR THE LOVE OF EVERYTHING HOLY REWRITE ME
-    println!("Usage: vault [OPTION/TITLE]");
-    println!("Manage Notes");
-    println!("\nFlags:\n");
-    println!("--help    / -h:     print help message");
-    println!("--purge   / -p:     purge files with one newline char");
-    println!("--remove  / -r:     remove a note");
-    println!("--list    / -l:     list all of your notes");
-    println!("--search  / -s:     search by keyword, display what matches the keyword");
-    println!("--rename  / -r:      rename a note\n");
 }
 
 // removing the link is just removing the note because the note you are accessing
@@ -206,8 +193,8 @@ fn create_link(source_file: PathBuf, lnk_name: PathBuf) -> Result<()> {
     Ok(())
 }
 
-// this should also not have the case that you want to "vault another file"
-// that should never happen in the first place. stick it in the vault folder or symlink it
+// this should also not have the case that you want to "bones another file"
+// that should never happen in the first place. stick it in the bones folder or symlink it
 /// Make sure that we strip and replace any path seperators in the name of the file
 fn strip_seperators(s_file: String) -> String {
     // make no assumptions, s_file may have a path seperator in it
@@ -259,9 +246,9 @@ fn main() {
     let s_file = strip_seperators(s_file);
 
 
-    let vault_path: String = env::var("VAULT_PATH").expect("Vault Path not Found");
-    let vault_editor: String = env::var("VAULT_EDITOR").expect("Vault Editor not Found");
-    let ctx = VaultContext { vault_path, vault_editor, s_file };
+    let bones_path: String = env::var("VAULT_PATH").expect("Vault Path not Found");
+    let bones_editor: String = env::var("VAULT_EDITOR").expect("Vault Editor not Found");
+    let ctx = BoneMarrow { bones_path, bones_editor, s_file };
 
     if args[1] == "link" {
         // some bounds checking
@@ -277,7 +264,7 @@ fn main() {
 
         // the second arg or arg-3 is what the link name should be
         let mut link_name = PathBuf::new();
-        link_name.push(&ctx.vault_path);
+        link_name.push(&ctx.bones_path);
 
         // create link address
         link_name.push(&args[3]);
@@ -297,13 +284,13 @@ fn main() {
         }
         // create the old path as pathbuf
         let mut old = PathBuf::new();
-        old.push(&ctx.vault_path);
+        old.push(&ctx.bones_path);
         // args-3 is the source file
         old.push(&args[2]);
 
         // create a path that represent the new file
         let mut new = PathBuf::new();
-        new.push(&ctx.vault_path);
+        new.push(&ctx.bones_path);
         // args-4 is the new file name
         // to see if that file name already exists we verify that in the rename func
         new.push(&args[3]);
@@ -320,9 +307,9 @@ fn main() {
     // after we verify args is longer than 1 we can peek at what that arg is
 
     if args[1] == "-l" || args[1] == "list" || args[1] == "ls" {
-        // we just loop over all of the files in the vault
+        // we just loop over all of the files in the bones
         // then we print them out at an unknown size
-        list_dir(&ctx.vault_path);
+        list_dir(&ctx.bones_path);
         // we can exit here to not open a editor process
         return;
     }
@@ -334,7 +321,7 @@ fn main() {
         }
         // there will be this idea that you can look into files
         let mut n_path = PathBuf::new();
-        n_path.push(&ctx.vault_path);
+        n_path.push(&ctx.bones_path);
         n_path.push(&args[2]);
         let view = view_symlink(n_path);
 
@@ -350,7 +337,7 @@ fn main() {
         }
 
         let mut n_pbuf = PathBuf::new();
-        n_pbuf.push(&ctx.vault_path);
+        n_pbuf.push(&ctx.bones_path);
         search_for_file(&args[2], n_pbuf);
 
         return;
@@ -362,7 +349,7 @@ fn main() {
     }
 
     if args[1] == "-p" || args[1] == "--purge" {
-        purge_empty_files(&ctx.vault_path);
+        purge_empty_files(&ctx.bones_path);
         return;
     }
 
@@ -375,31 +362,34 @@ fn main() {
             return;
         }
 
-        let ftr = format!("{}{}", &ctx.vault_path, args[2]);
+        let mut ftr = PathBuf::new();
+        ftr.push(&ctx.bones_path);
+        ftr.push(&args[2]);
 
         // go ahead and remove the file
-        remove_note(&ftr, &args[2]);
-        return;
+        if remove_note(&ftr, &args[2]).is_ok() {
+            return;
+        } else { println!("could not remove file"); return; }
     }
 
-    // panic if the vault path does not exist
-    if !Path::new(&ctx.vault_path).exists() {
+    // panic if the bones path does not exist
+    if !Path::new(&ctx.bones_path).exists() {
         println!("VAULT_PATH does not exist");
         std::mem::drop(args);
         panic!();
     }
 
-    // get the full path final dest for vault_path
+    // get the full path final dest for bones_path
     let fpath = ctx.make_fpath();
 
-    // check if file already exists- if file exists open it in the vault_editor
+    // check if file already exists- if file exists open it in the bones_editor
     if Path::new(&fpath).is_file() {
 
         // we just want to clean up after ourselves here
         std::mem::drop(args);
 
         // function defined by operating system at the top of the file
-        spawn_vault_editor(ctx.vault_editor, fpath);
+        spawn_bones_editor(ctx.bones_editor, fpath);
 
     } else {
 
@@ -411,13 +401,13 @@ fn main() {
 
         // write header and title into file
         fs::write(&fpath, header)
-            .expect("could not write to vault file");
+            .expect("could not write to bones file");
 
         // we just want to clean up after ourselves here
         std::mem::drop(args);
 
         // function defined by operating system at the top of the file
-        spawn_vault_editor(ctx.vault_editor, fpath);
+        spawn_bones_editor(ctx.bones_editor, fpath);
     }
 
     panic!();

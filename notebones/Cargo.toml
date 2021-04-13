@@ -1,5 +1,5 @@
 [package]
-name = "vault"
+name = "notebone"
 version = "0.1.0"
 authors = ["justnat3 <vemhira@gmail.com>"]
 edition = "2018"

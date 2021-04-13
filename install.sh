@@ -16,6 +16,11 @@ if [ $# -eq 0 ]; then
     exit
 fi
 
-# $(which $1) to get the path of the editor specified
-echo -e "export VAULT_EDITOR=$(which $1 2>>/dev/null);\nexport VAULT_PATH=$HOME/.notes" >> $HOME/.bashrc
+# only add the configuration if the grep returns 1
+grep -i "VAULT_EDITOR" $HOME/.bashrc &>>/dev/null
+if [ $? -eq 1 ]; then
+    # $(which $1) to get the path of the editor specified
+    echo -e "export VAULT_EDITOR=$(which $1 2>>/dev/null);\nexport VAULT_PATH=$HOME/.notes" >> $HOME/.bashrc
+fi
+
 # Thanks Nyx!

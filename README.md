@@ -26,8 +26,9 @@ more features. Like creating links to projects READMEs and other forms of docume
 #### generic-linux:
 
 ```bash
+# valid path has a forward slash at the end of the path
 # set a valid path to your vault
-export VAULT_PATH=/path/to/vault
+export VAULT_PATH=/path/to/vault/
 
 # set a valid path to your editor
 export VAULT_EDITOR=/path/to/your/editor

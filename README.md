@@ -4,6 +4,9 @@ the idea came from how I personally store my notes, which happens to be in a dir
 called "the_vault". This is compatible with all editors, and I am starting to implement
 more features. Like creating links to projects READMEs and other forms of documentation.
 
+
+#### please note that there will be name change coming "notebones" will be the new name of this project soon. I feel that vault is a very forget-able name. also "linking" can be called "ligaments" and that is just _so cool_. Cheers- 
+
 #### Feedback Wanted.  If this is something you are interested in or if this is something you have used & have feedback. Please shoot me a message either by email nreed@linux.com or you can create a issue that will be marked feedback or a respective tag.
 
 

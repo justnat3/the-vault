@@ -1,236 +1,71 @@
-#[cfg(target_os = "linux")]
-use std::os::unix::process::CommandExt;
-
+mod context;
+mod graveyard;
+use crate::graveyard::grave::Grave;
+use clap::*;
 use std::{
-    io::Error,
-    io::ErrorKind,
-    io::Result,
-    path::PathBuf,
-    process::Command,
     path::Path,
     env,
     fs,
 };
 
-// XXX be able to give notes a description and just use that in the note?
-// XXX search should instead be a match, so you can search for multiple files
-//     and for one file all at the same time
-
-/// Keeping our Vault's Context alive
-struct BoneMarrow {
-    /// path to the directory that holds all of our bones files
-    bones_path: String,
-    /// path to the editor executable
-    bones_editor: String,
-    /// the file that the user passes in that they want to edit
-    /// this only applies if they pass in a file that they want to edit
-    s_file: String // this all though be changed to PathBufs
+impl Grave for Path {
 }
 
-/// collection of functions that take advantage of the BoneMarrow structure
-impl BoneMarrow {
-    /// Create full path context to verify later in the program
-    fn make_fpath(&self) -> PathBuf {
-        let mut path = PathBuf::new();
-        path.push(&self.bones_path);
-        path.push(&self.s_file);
 
-        path
-    }
-}
-
-// All execve does is take the parent process image and replace it with new process
-/// This uses the execve syscall under the hood
-#[cfg(target_os = "linux")]
-fn spawn_bones_editor(bones_editor: String, fpath: PathBuf) {
-    let path = fpath.to_string_lossy();
-    Command::new(bones_editor)
-        .arg(&*path)
-        .exec();
-}
-
-/// this is currently unsupported
-#[cfg(target_os = "windows")]
-fn spawn_bones_editor(bones_editor: String, fpath: String) {
-    Command::new(bones_editor)
-        .arg(fpath)
-        .spawn()
-        .expect("Could not spawn bones_editor process for unknown reason");
-}
-
-// TODO: REFACTOR ME PLEASE
-/// if there are files with the header # bleh blah
-///
-/// ^ new line
-/// and there is nothing else in the file then we can assume that the file is a empty
-/// initialized note.
-fn purge_empty_files(path: &String) {
-    if let Ok(files) = fs::read_dir(path) {
-        // iter over the files in ok(direntry)
-        for file in files {
-            if let Ok(file) = file {
-                let file_read = fs::read_to_string(&file.path());
-                if let Ok(file_read) = file_read {
-                    let c = file_read.matches("\n").count();
-                    if c == 1 {
-                        let file_removed = fs::remove_file(&file.path());
-                        if file_removed.is_ok() {
-                            println!("Remove File {:?}", &file.path());
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// remove notes without having to interact with the bones path
-fn remove_note(path: &PathBuf, file_name: &String) -> Result<()>{
-    // convert path(PathBuf) to &Path with .to_path()
-    if path.as_path().exists() {
-        fs::remove_file(path)?;
-        println!("\x1b[0;31mRemoved \x1b[0m{}", file_name);
-        Ok(())
-    } else {
-        Err(Error::new(ErrorKind::Other, "Could not remove file"))
-    }
-}
-
-/// rename notes without having to interact with the bones path
-fn rename_note(old: PathBuf, new: PathBuf) -> Result<()> {
-    // if the path does not already exist go ahead and rename it
-    if Path::new(&new).exists() {
-        Err(Error::new(ErrorKind::Other, "path already exists"))
-    } else {
-        fs::rename(old, new)?;
-        Ok(())
-    }
-}
-
-/// the output is the display of all avaliable files based on a search
-///
-/// bones -s file
-///
-/// this may return one or more matches based on the input string
-/// treat this more of a grep that highlights the files more than search for a specific
-/// file this is will also allow for smaller search inputs
-fn search_for_file(k_word: &String, ctx_path: PathBuf) {
-    println!("");
-    // ok(direntry) list of directory entries
-    if let Ok(files) = fs::read_dir(ctx_path) {
-        // iter over the files in ok(direntry)
-        for file in files {
-            if let Ok(file) = file {
-                if file.file_name().to_string_lossy().contains(k_word) {
-                    // convert direntry to osstring
-                    // convert osstring to string and print it out
-                    println!("\x1b[32mFound\x1b[0m {}", file.file_name().to_string_lossy());
-                }
-            }
-        }
-    }
-    print!("\n");
-}
-
-/// a way to list all the bones files in alphabetical order
-fn list_dir(path: &String) {
-    let mut results: Vec<_> = Vec::new();
-    // ok(direntry) list of directory entries
-    if let Ok(files) = fs::read_dir(path) {
-        println!("\n         \x1b[7mVault Files\x1b[0m");
-        println!("  --------------------------");
-        // iter over the files in ok(direntry)
-        for file in files {
-            if let Ok(file) = file {
-
-                // if the file is a symlink we should include a link tag
-                let attr = fs::read_link(file.path());
-                if attr.is_ok() {
-                    let is_sym = format!(
-                            "{} <- \x1b[32mLink\x1b[0m",
-                            file.file_name().to_string_lossy().to_string()
-                            );
-
-                    results.push(is_sym);
-                    continue
-                }
-
-                results.push(file.file_name().to_string_lossy().to_string());
-                // convert direntry to osstring
-                // convert osstring to string and print it out
-            }
-        }
-    }
-
-    results.sort();
-    for file in results {
-        println!("   {}", file);
-    }
-    print!("\n");
-}
-
-fn view_symlink(path: PathBuf) -> Result<()> {
-    let attr = fs::read_link(path);
-    if let Ok(attr) = attr {
-        let attr = attr.into_os_string().into_string().expect("could not conver to string");
-        println!("\x1b[32mLinked To\x1b[0m: {}", attr);
-        Ok(())
-    } else {
-        Err(Error::new(ErrorKind::Other, "File is not a symlink"))
-    }
-}
 
 /// print help function
 fn print_help() {
     // TODO FOR THE LOVE OF EVERYTHING HOLY REWRITE ME
+    println!("notebone: [NOTE_NAME/OPTION] [ARGS]");
+    println!("  Bone-Keeping in a small graveyard");
+    println!("");
+    println!("  Your files are stored @ $VAULT_PATH");
+    println!("  know your editor @ $VAULT_EDITOR");
+    println!("");
+    println!("  Options:");
+    println!("    ls | list | -l       Listing all of your bones");
+    println!("");
+    println!("    remove | rm          Remove individual bones");
+    println!("");
+    println!("    rename               ");
+    println!("");
+    println!("");
+    println!("");
+    println!("");
+    println!("");
+
 }
 
-// removing the link is just removing the note because the note you are accessing
-// is actually just a symlink
-#[cfg(target_os = "linux")]
-fn create_link(source_file: PathBuf, lnk_name: PathBuf) -> Result<()> {
-    std::os::unix::fs::symlink(source_file, lnk_name)?;
-    Ok(())
-}
 
-// this should also not have the case that you want to "bones another file"
-// that should never happen in the first place. stick it in the bones folder or symlink it
-/// Make sure that we strip and replace any path seperators in the name of the file
-fn strip_seperators(s_file: String) -> String {
-    // make no assumptions, s_file may have a path seperator in it
-    // PathBuf will just allow you to push it thinking its the rest of the path
-    if s_file.contains("\\")  {
-        // make sure there is only one hyphen next to a seperator
-        if s_file.contains("-\\") {
-            let s_file = s_file.replace("-\\", "-");
-            let s_file = s_file.replace("\\", "-");
-            return s_file;
-        } else {
-            // replace seperator with hyphen
-            let s_file = s_file.replace("\\", "-");
-            return s_file;
-        };
-    }
-
-    if s_file.contains("/")  {
-        // make sure there is only one hyphen next to a seperator
-        if s_file.contains("-/") {
-            let s_file = s_file.replace("-/", "-");
-            let s_file = s_file.replace("/", "-");
-            return s_file;
-        } else {
-            // replace seperator with hyphen
-            let s_file = s_file.replace("/", "-");
-            return s_file;
-        };
-    }
-
-    // later in the program may still fail because of this
-    // however we are assume at this point there is no seperators
-    s_file
-}
 
 fn main() {
+
+    let matches = App::new("NoteBones")
+                      .version("0.2.0")
+                      .author("Nathan reed. <nreed@linux.com>")
+                      .about("Bone-Keeping in a small graveyard")
+                      .arg(Arg::with_name("rename")
+                           .short("mv")
+                           .long("rename")
+                           .value_name("FILE")
+                           .help("rename file src->dest")
+                           .takes_value(true))
+                      .arg(Arg::with_name("remove")
+                           .help("remove grave with a given name")
+                           .required(true)
+                           .index(1))
+                      .arg(Arg::with_name("v")
+                           .short("v")
+                           .multiple(true)
+                           .help("Sets the level of verbosity"))
+                      .subcommand(SubCommand::with_name("test")
+                                  .about("controls testing features")
+                                  .version("1.3")
+                                  .author("Someone E. <someone_else@other.com>")
+                                  .arg(Arg::with_name("debug")
+                                      .short("d")
+                                      .help("print debug information verbosely")))
+                      .get_matches();
 
     let args: Vec<String> = env::args().collect();
 
@@ -243,134 +78,12 @@ fn main() {
     let s_file: String = args[1..].join("-").split_whitespace().collect();
 
     // make sure there are no path seperators in the file name
-    let s_file = strip_seperators(s_file);
+    let s_file = graveyard::utils::strip_seperators(s_file);
 
 
     let bones_path: String = env::var("VAULT_PATH").expect("Vault Path not Found");
     let bones_editor: String = env::var("VAULT_EDITOR").expect("Vault Editor not Found");
-    let ctx = BoneMarrow { bones_path, bones_editor, s_file };
-
-    if args[1] == "link" {
-        // some bounds checking
-        if args.len() != 4 {
-            print_help();
-            return;
-        }
-
-        // the first arg or arg-2 is what file you plan to link
-        let link_path = PathBuf::from(&args[2]);
-        let link_path = fs::canonicalize(&link_path).expect("Could not create path");
-
-
-        // the second arg or arg-3 is what the link name should be
-        let mut link_name = PathBuf::new();
-        link_name.push(&ctx.bones_path);
-
-        // create link address
-        link_name.push(&args[3]);
-
-        // finally we can create the link
-        create_link(link_path, link_name).expect("Failed to create the link");
-        println!("Link Created! {}", &args[3]);
-
-        return;
-    }
-
-    if args[1] == "rename" || args[1] == "mv" {
-        // bounds checking
-        if args.len() != 4 {
-            print_help();
-            return;
-        }
-        // create the old path as pathbuf
-        let mut old = PathBuf::new();
-        old.push(&ctx.bones_path);
-        // args-3 is the source file
-        old.push(&args[2]);
-
-        // create a path that represent the new file
-        let mut new = PathBuf::new();
-        new.push(&ctx.bones_path);
-        // args-4 is the new file name
-        // to see if that file name already exists we verify that in the rename func
-        new.push(&args[3]);
-
-        if rename_note(old, new).is_ok() {
-            println!("Note Renamed {}", &args[3]);
-        } else {
-            println!("Note Already Exists {}", &args[3]);
-        }
-
-        return;
-    }
-
-    // after we verify args is longer than 1 we can peek at what that arg is
-
-    if args[1] == "-l" || args[1] == "list" || args[1] == "ls" {
-        // we just loop over all of the files in the bones
-        // then we print them out at an unknown size
-        list_dir(&ctx.bones_path);
-        // we can exit here to not open a editor process
-        return;
-    }
-
-    if args[1] == "view" {
-        if args.len() != 3 {
-            print_help();
-            return
-        }
-        // there will be this idea that you can look into files
-        let mut n_path = PathBuf::new();
-        n_path.push(&ctx.bones_path);
-        n_path.push(&args[2]);
-        let view = view_symlink(n_path);
-
-        // FIXME this is kind of ugly
-        if view.is_ok() { return; } else { return; }
-    }
-
-    if args[1] == "-s" || args[1] == "search" {
-        // bounds checking
-        if args.len() != 3 {
-            print_help();
-            return;
-        }
-
-        let mut n_pbuf = PathBuf::new();
-        n_pbuf.push(&ctx.bones_path);
-        search_for_file(&args[2], n_pbuf);
-
-        return;
-    }
-
-    if args[1] == "-h" || args[1] == "--help" {
-        print_help();
-        return;
-    }
-
-    if args[1] == "-p" || args[1] == "--purge" {
-        purge_empty_files(&ctx.bones_path);
-        return;
-    }
-
-    if args[1] == "remove" || args[1] == "rm" {
-        // it makes sense that the args are of length 3 because we only really
-        // want to remove one file
-        if !args.len() == 3 || args.len() <= 2 {
-            // print if they don't know how to use remove
-            print_help();
-            return;
-        }
-
-        let mut ftr = PathBuf::new();
-        ftr.push(&ctx.bones_path);
-        ftr.push(&args[2]);
-
-        // go ahead and remove the file
-        if remove_note(&ftr, &args[2]).is_ok() {
-            return;
-        } else { println!("could not remove file"); return; }
-    }
+    let ctx = context::BoneMarrow { bones_path, bones_editor, s_file };
 
     // panic if the bones path does not exist
     if !Path::new(&ctx.bones_path).exists() {
@@ -389,7 +102,7 @@ fn main() {
         std::mem::drop(args);
 
         // function defined by operating system at the top of the file
-        spawn_bones_editor(ctx.bones_editor, fpath);
+        graveyard::gravekeeper::spawn_bones_editor(&ctx.bones_editor, &fpath);
 
     } else {
 
@@ -407,7 +120,7 @@ fn main() {
         std::mem::drop(args);
 
         // function defined by operating system at the top of the file
-        spawn_bones_editor(ctx.bones_editor, fpath);
+        graveyard::gravekeeper::spawn_bones_editor(&ctx.bones_editor, &fpath);
     }
 
     panic!();

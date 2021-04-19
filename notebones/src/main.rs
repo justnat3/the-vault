@@ -3,77 +3,52 @@ mod graveyard;
 use crate::graveyard::grave::Grave;
 use clap::*;
 use std::{
+    io,
     path::Path,
-    env,
     fs,
+    env,
 };
 
 impl Grave for Path {
+
+    fn create_tunnel(source_file: &Path, lnk_name: &Path) -> io::Result<()> {
+       match std::os::unix::fs::symlink(source_file, lnk_name) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e)
+        }
+    }
+
+    fn peek_tunnel(path: &Path) -> io::Result<()> {
+        let attr = fs::read_link(path).unwrap();
+
+        attr
+            .into_os_string()
+            .into_string()
+            .expect("could not conver to string");
+
+        Ok(())
+    }
+
+    fn move_grave(old: &Path, new: &Path) {
+        // if the path does not already exist go ahead and rename it
+        if Path::new(&new).exists() { fs::rename(old, new).unwrap(); }
+    }
+
+    fn dig_up(path: &Path, f_name: &str) {
+        // we already check if the path exists, otherwise there are bad perms
+        if path.exists() {
+            fs::remove_file(path).unwrap();
+            println!("\x1b[0;31mRemoved \x1b[0m{}", f_name);
+        }
+    }
+
 }
-
-
-
-/// print help function
-fn print_help() {
-    // TODO FOR THE LOVE OF EVERYTHING HOLY REWRITE ME
-    println!("notebone: [NOTE_NAME/OPTION] [ARGS]");
-    println!("  Bone-Keeping in a small graveyard");
-    println!("");
-    println!("  Your files are stored @ $VAULT_PATH");
-    println!("  know your editor @ $VAULT_EDITOR");
-    println!("");
-    println!("  Options:");
-    println!("    ls | list | -l       Listing all of your bones");
-    println!("");
-    println!("    remove | rm          Remove individual bones");
-    println!("");
-    println!("    rename               ");
-    println!("");
-    println!("");
-    println!("");
-    println!("");
-    println!("");
-
-}
-
-
 
 fn main() {
 
-    let matches = App::new("NoteBones")
-                      .version("0.2.0")
-                      .author("Nathan reed. <nreed@linux.com>")
-                      .about("Bone-Keeping in a small graveyard")
-                      .arg(Arg::with_name("rename")
-                           .short("mv")
-                           .long("rename")
-                           .value_name("FILE")
-                           .help("rename file src->dest")
-                           .takes_value(true))
-                      .arg(Arg::with_name("remove")
-                           .help("remove grave with a given name")
-                           .required(true)
-                           .index(1))
-                      .arg(Arg::with_name("v")
-                           .short("v")
-                           .multiple(true)
-                           .help("Sets the level of verbosity"))
-                      .subcommand(SubCommand::with_name("test")
-                                  .about("controls testing features")
-                                  .version("1.3")
-                                  .author("Someone E. <someone_else@other.com>")
-                                  .arg(Arg::with_name("debug")
-                                      .short("d")
-                                      .help("print debug information verbosely")))
-                      .get_matches();
 
     let args: Vec<String> = env::args().collect();
 
-    // bounds checking
-    if args.len() <= 1 {
-        print_help();
-        return;
-    }
 
     let s_file: String = args[1..].join("-").split_whitespace().collect();
 

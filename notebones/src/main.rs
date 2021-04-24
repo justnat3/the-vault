@@ -1,7 +1,6 @@
 mod context;
 mod graveyard;
 use crate::graveyard::grave::Grave;
-use clap::*;
 use std::{
     io,
     path::Path,
@@ -10,7 +9,7 @@ use std::{
 };
 
 impl Grave for Path {
-
+    #[cfg(not(target_os = "windows"))]
     fn create_tunnel(source_file: &Path, lnk_name: &Path) -> io::Result<()> {
        match std::os::unix::fs::symlink(source_file, lnk_name) {
             Ok(_) => Ok(()),
@@ -18,6 +17,7 @@ impl Grave for Path {
         }
     }
 
+    #[cfg(not(target_os = "windows"))]
     fn peek_tunnel(path: &Path) -> io::Result<()> {
         let attr = fs::read_link(path).unwrap();
 
@@ -97,6 +97,4 @@ fn main() {
         // function defined by operating system at the top of the file
         graveyard::gravekeeper::spawn_bones_editor(&ctx.bones_editor, &fpath);
     }
-
-    panic!();
 }

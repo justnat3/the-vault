@@ -16,7 +16,7 @@ pub fn spawn_bones_editor(bones_editor: &str, fpath: &Path) {
 
 /// this is currently unsupported
 #[cfg(target_os = "windows")]
-pub fn spawn_bones_editor(bones_editor: &str, fpath: String) {
+pub fn spawn_bones_editor(bones_editor: &str, fpath: &Path) {
     Command::new(bones_editor)
         .arg(fpath)
         .spawn()

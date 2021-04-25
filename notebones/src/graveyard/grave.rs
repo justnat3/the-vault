@@ -12,6 +12,7 @@ pub trait Grave {
     fn create_tunnel(source_file: &Path, lnk_name: &Path) -> Result<()>;
 
     /// view symlinks
+    #[cfg(not(target_os = "windows"))]
     fn peek_tunnel(path: &Path) -> Result<()>;
 
     /// rename notes without having to interact with the bones path
